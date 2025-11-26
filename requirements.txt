@@ -12,3 +12,4 @@ matplotlib
 folium
 geopandas
 xlrd==1.2.0
+sqlalchemy-mate<2.0.0.1
