@@ -35,7 +35,7 @@ def read_xlsx():
     # Fallback to local file
     st.warning("Using local backup (2018)")
     try:
-        dfs = pd.read_excel("./static/snap_2018.xlsx", sheet_name=None, engine="openpyxl")
+       dfs = pd.read_excel("./static/snap_2018.xlsx", sheet_name=None, engine="openpyxl")
         df1 = dfs.get("Purchase Data April 2018", pd.DataFrame())
         df2 = dfs.get("Refinance Data April 2018", pd.DataFrame())
         df1 = df1[[c for c in cols if c in df1.columns]]
@@ -43,9 +43,6 @@ def read_xlsx():
         final = pd.concat([df1, df2], ignore_index=True)
         st.info(f"Loaded {len(final):,} rows")
         return final
-    except:
-        st.error("Backup file missing")
-        return pd.DataFrame()
 
 df_final = read_xlsx()
 
