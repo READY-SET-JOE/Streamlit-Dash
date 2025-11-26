@@ -9,16 +9,9 @@
 ############################################################################################
 
 import pandas as pd
-import geopandas as gpd
 import streamlit as st
 import os
 import requests
-from streamlit_folium import folium_static
-import pydeck as pdk
-import leafmap.colormaps as cm
-from leafmap.common import hex_to_rgb
-import seaborn as sns
-import matplotlib.pyplot as plt
 
 # ============================= CONFIG =============================
 st.set_page_config(layout="wide", page_title="U.S. Real Estate Trends")
@@ -28,7 +21,6 @@ os.makedirs(os.path.join(STATIC_PATH, "downloads"), exist_ok=True)
 # ============================= AUTO-DOWNLOAD LATEST DATA =============================
 @st.cache_data(ttl=24*3600)  # Refreshes once per day
 def read_xlsx():
-    # List of recent HUD SNAP files (most recent first)
     urls = [
         "https://www.huduser.gov/portal/datasets/huduser_files/snap/snap_2024q4.xlsx",
         "https://www.huduser.gov/portal/datasets/huduser_files/snap/snap_2024q3.xlsx",
@@ -36,55 +28,35 @@ def read_xlsx():
         "https://www.huduser.gov/portal/datasets/huduser_files/snap/snap_2024q1.xlsx",
         "https://www.huduser.gov/portal/datasets/huduser_files/snap/snap_2023q4.xlsx",
     ]
-    
+
     columns_needed = [
         "Down Payment Source", "Loan Purpose", "Property Type",
         "Property State", "Property City", "Property Zip", "Interest Rate"
     ]
-    
+
+    # Try downloading latest data from HUD
     for url in urls:
         try:
-            dfs = pd.read_excel(url, sheet_name=None)
-            if "Purchase Data" in dfs and "Refinance Data" in dfs:
-                df = pd.concat([dfs["Purchase Data"], dfs["Refinance Data"]], ignore_index=True)
+            dfs = pd.read_excel(url, sheet_name=None, engine="openpyxl")
+            purchase_sheet = "Purchase Data April 2018"
+            refinance_sheet = "Refinance Data April 2018"
+
+            if purchase_sheet in dfs and refinance_sheet in dfs:
+                df1 = dfs[purchase_sheet]
+                df2 = dfs[refinance_sheet]
+
+                # Safely select only columns that exist
+                df1 = df1[[c for c in columns_needed if c in df1.columns]]
+                df2 = df2[[c for c in columns_needed if c in df2.columns]]
+
+                final_df = pd.concat([df1, df2], ignore_index=True)
                 st.success(f"Latest data loaded: {url.split('/')[-1]}")
-                return df[columns_needed].copy()
-        except:
-            continue
-    
-    # Fallback to local file if internet fails
+                return final_df
+        except Exception as e:
+            continue  # Try next URL
+
+    # Fallback: Use local 2018 file
     st.warning("Using local backup data (2018)")
-    return pd.read_excel("./static/snap_2018.xlsx", sheet_name=None, usecols=columns_needed)
-
-# ============================= LOAD DATA =============================
-df_final = read_xlsx()
-
-# ============================= SIDEBAR INFO =============================
-st.sidebar.success("Data auto-updates daily from HUD.gov")
-st.sidebar.caption("Source: U.S. Department of Housing and Urban Development")
-
-# ============================= MAIN APP =============================
-st.title("U.S. Real Estate Data & Market Trends")
-st.markdown("""
-This dashboard automatically pulls the **latest available** purchase and refinance loan data from HUD.
-No manual updates needed — it's always fresh!
-""")
-
-st.write("Total loans in dataset:", len(df_final))
-st.dataframe(df_final.head(100))
-
-# Simple visualizations
-col1, col2 = st.columns(2)
-
-with col1:
-    st.subheader("Loan Purpose Distribution")
-    purpose_counts = df_final["Loan Purpose"].value_counts()
-    st.bar_chart(purpose_counts)
-
-with col2:
-    st.subheader("Interest Rate by Loan Purpose")
-    fig, ax = plt.subplots()
-    sns.boxplot(data=df_final, x="Loan Purpose", y="Interest Rate", ax=ax)
-    st.pyplot(fig)
-
-st.success("Your dashboard is LIVE and AUTO-UPDATING!")
+    try:
+        dfs = pd.read_excel("./static/snap_2018.xlsx", sheet_name=None, engine="openpyxl")
+        df1 = dfs.get("Purchase
