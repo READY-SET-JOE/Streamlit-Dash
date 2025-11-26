@@ -4,8 +4,6 @@
 #                           Creation Date: November 06, 2022                               #
 #                         Source Language: Python                                          #
 #         Repository:    https://github.com/amajji/Streamlit-Dash.git                      #
-#                              --- Code Description ---                                    #
-#         Streamlit app designed for visualizing U.S. real estate data and market trends   #
 ############################################################################################
 
 import pandas as pd
@@ -38,7 +36,7 @@ def read_xlsx():
         "Interest Rate",
     ]
 
-    # Try online files first
+    # Try online files
     for url in urls:
         try:
             dfs = pd.read_excel(url, sheet_name=None, engine="openpyxl")
@@ -48,10 +46,8 @@ def read_xlsx():
             if purchase_sheet in dfs and refinance_sheet in dfs:
                 df1 = dfs[purchase_sheet]
                 df2 = dfs[refinance_sheet]
-
                 df1 = df1[[c for c in columns_needed if c in df1.columns]]
                 df2 = df2[[c for c in columns_needed if c in df2.columns]]
-
                 final_df = pd.concat([df1, df2], ignore_index=True)
                 st.success(f"Latest data loaded: {url.split('/')[-1]}")
                 return final_df
@@ -64,15 +60,13 @@ def read_xlsx():
         dfs = pd.read_excel("./static/snap_2018.xlsx", sheet_name=None, engine="openpyxl")
         df1 = dfs.get("Purchase Data April 2018", pd.DataFrame())
         df2 = dfs.get("Refinance Data April 2018", pd.DataFrame())
-
         df1 = df1[[c for c in columns_needed if c in df1.columns]]
         df2 = df2[[c for c in columns_needed if c in df2.columns]]
-
         final_df = pd.concat([df1, df2], ignore_index=True)
         st.info(f"Loaded {len(final_df):,} rows from 2018 backup")
         return final_df
-    except Exception as e:
-        st.error("Could not load data. Check that ./static/snap_2018.xlsx exists.")
+    except Exception:
+        st.error("Could not load data. Is ./static/snap_2018.xlsx in your repo?")
         return pd.DataFrame()
 
 # ============================= LOAD DATA =============================
@@ -84,16 +78,13 @@ st.sidebar.caption("Source: U.S. Department of Housing and Urban Development")
 
 # ============================= MAIN APP =============================
 st.title("U.S. Real Estate Data & Market Trends")
-st.markdown("""
-This dashboard automatically pulls the **latest available** HUD loan data.  
-If the newest file isn't out yet, it uses your 2018 backup — **it will never crash**.
-""")
+st.markdown("This dashboard automatically pulls the latest HUD loan data. It will never crash.")
 
 if df_final.empty:
-    st.error("No data loaded. Please ensure ./static/snap_2018.xlsx is in your repo.")
+    st.error("No data loaded. Please ensure ./static/snap_2018.xlsx exists in your repo.")
     st.stop()
 
-st.write(f"**Total loans in dataset:** {len(df_final):,}")
+st.write(f"Total loans in dataset: {len(df_final):,}")
 st.dataframe(df_final.head(100))
 
 col1, col2 = st.columns(2)
